@@ -10,9 +10,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Force Node.js to use Google DNS to fix 'querySrv ECONNREFUSED' error in Windows
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// Force Node.js to use Google DNS to fix 'querySrv ECONNREFUSED' error in Windows (Only locally)
+if (process.env.NODE_ENV !== 'production') {
+    const dns = require('dns');
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/biodataSync';
