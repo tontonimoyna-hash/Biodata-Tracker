@@ -97,6 +97,7 @@ app.delete('/api/biodata/:id', async (req, res) => {
     } catch (error) {
       console.error("Error deleting data:", error);
       res.status(500).json({ error: 'Server error' });
+    }
   });
 
 // GET database storage statistics
