@@ -95,9 +95,39 @@ app.delete('/api/biodata/:id', async (req, res) => {
     } catch (error) {
       console.error("Error deleting data:", error);
       res.status(500).json({ error: 'Server error' });
-    }
   });
 
+// GET database storage statistics
+app.get('/api/stats', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+    
+    // Get database stats
+    const stats = await mongoose.connection.db.stats();
+    
+    // Calculate usage
+    const dataSizeMB = (stats.dataSize / (1024 * 1024)).toFixed(2);
+    const storageSizeMB = (stats.storageSize / (1024 * 1024)).toFixed(2);
+    const totalLimitMB = 512; // Assuming MongoDB Atlas Free Tier
+    const freeSpaceMB = (totalLimitMB - storageSizeMB).toFixed(2);
+    
+    res.json({
+      success: true,
+      message: 'Storage stats retrieved successfully',
+      documentsCount: stats.objects,
+      dataSizeMB: dataSizeMB,
+      storageUsedMB: storageSizeMB,
+      freeSpaceMB: freeSpaceMB,
+      totalLimitMB: totalLimitMB,
+      usagePercentage: ((storageSizeMB / totalLimitMB) * 100).toFixed(2) + '%'
+    });
+  } catch (error) {
+    console.error("Error fetching database stats:", error);
+    res.status(500).json({ error: 'Failed to retrieve storage stats' });
+  }
+});
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 }
