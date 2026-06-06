@@ -16,11 +16,28 @@ if (process.env.NODE_ENV !== 'production') {
     dns.setServers(['8.8.8.8', '8.8.4.4']);
 }
 
-// MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/biodataSync';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected Successfully'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+// Serverless-friendly MongoDB Connection
+let cachedDb = null;
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+  if (!cachedDb) {
+    cachedDb = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 10
+    }).then(() => {
+      console.log('✅ MongoDB Connected Successfully');
+    }).catch(err => {
+      console.error('❌ MongoDB Connection Error:', err);
+      cachedDb = null;
+      throw err;
+    });
+  }
+  await cachedDb;
+}
 
 // Mongoose Schema & Model
 const biodataSchema = new mongoose.Schema({
@@ -29,7 +46,17 @@ const biodataSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const Biodata = mongoose.model('Biodata', biodataSchema);
+const Biodata = mongoose.models.Biodata || mongoose.model('Biodata', biodataSchema);
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Routes
 app.get('/', (req, res) => {
